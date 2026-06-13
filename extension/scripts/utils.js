@@ -251,7 +251,7 @@ function checkLookalike(hostname, baseDomain) {
         }
         
         // 1. Character substitution (e.g. paypa1.com -> paypal)
-        if (normalizedRegisteredName === brand && registeredName !== brand) {
+        if (normalizedRegisteredName === normalizeDomain(brand) && registeredName !== brand) {
             return `Lookalike domain attempting to impersonate a popular brand (${brand}) via character substitution.`;
         }
         
@@ -388,8 +388,9 @@ function scanUrls(emailContent) {
     const urlRegex = /https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/g;
     const matches = emailContent.match(urlRegex) || [];
     
-    // Deduplicate
-    const uniqueUrls = [...new Set(matches)];
+    // Deduplicate and clean trailing punctuation
+    const cleanedUrls = matches.map(url => url.replace(/[.,;:!?)]+$/, ''));
+    const uniqueUrls = [...new Set(cleanedUrls)];
     
     return uniqueUrls.map(url => analyzeUrl(url));
 }
