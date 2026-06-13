@@ -3,16 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
+    <title>Login - MailCheckr</title>
     <link rel="stylesheet" href="styles/popup.css">
 </head>
 <body>
-    <h2>Login</h2>
-    <input type="text" id="username" placeholder="Username">
-    <input type="password" id="password" placeholder="Password">
-    <button id="login-btn">Login</button>
-    <p>New User? <a href="register.html">Register here</a></p>
-    <p id="error-message"></p>
+    <div class="auth-container card">
+        <h2 class="auth-title">MailCheckr Login</h2>
+        <div class="subtitle">Secure access to email safety tools</div>
+        
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" placeholder="Enter username">
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" placeholder="Enter password">
+        </div>
+        
+        <button id="login-btn" class="btn">Login</button>
+        
+        <div class="auth-links">
+            New User? <a href="register.html">Register here</a>
+        </div>
+        
+        <p id="error-message" class="error-message"></p>
+    </div>
 
     <script src="scripts/auth.js"></script>
 </body>

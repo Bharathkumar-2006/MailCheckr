@@ -3,22 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MailCheckr</title>
+    <title>MailCheckr - Email Inspector</title>
     <link rel="stylesheet" href="styles/popup.css">
 </head>
 <body>
     <h2>MailCheckr</h2>
+    <div class="subtitle">Advanced Email Security Dashboard</div>
 
-    <div id="email-checker">
-        <label for="email-input">Sender Email:</label>
-        <input type="text" id="email-input" placeholder="Fetching email...">
-        <button id="fetch-email-btn">Fetch Email</button>
-        <button id="check-email-btn">Check Email</button>
-        
-        <div id="result"></div>
-        <button id="logout-btn">Logout</button>
+    <!-- Navigation Tabs -->
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="sender-checker">Sender Check</button>
+        <button class="tab-btn" data-tab="header-analyzer">Header Analyzer</button>
+        <button class="tab-btn" data-tab="link-scanner">Link Scanner</button>
     </div>
 
+    <!-- Tab 1: Sender Checker (Existing) -->
+    <div id="sender-checker" class="tab-content active">
+        <div class="card">
+            <div class="form-group">
+                <label for="email-input">Sender Email Address</label>
+                <input type="text" id="email-input" placeholder="Fetching active email...">
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button id="fetch-email-btn" class="btn btn-secondary" style="flex: 1; margin: 0; padding: 10px 0;">Fetch Email</button>
+                <button id="check-email-btn" class="btn" style="flex: 1; margin: 0; padding: 10px 0;">Check Email</button>
+            </div>
+            
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <!-- Tab 2: Email Header Analyzer (Feature 1) -->
+    <div id="header-analyzer" class="tab-content">
+        <div class="card">
+            <div class="form-group">
+                <label for="header-input">Raw Email Headers</label>
+                <textarea id="header-input" placeholder="Paste raw email headers here... (from Gmail, Outlook, etc.)"></textarea>
+            </div>
+            <button id="analyze-header-btn" class="btn">Analyze Headers</button>
+            
+            <div id="header-result" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <!-- Tab 3: Link Scanner (Feature 2) -->
+    <div id="link-scanner" class="tab-content">
+        <div class="card">
+            <div class="form-group">
+                <label for="content-input">Email Content (Plain Text or HTML)</label>
+                <textarea id="content-input" placeholder="Paste the body of the email here to scan for suspicious links..."></textarea>
+            </div>
+            <button id="scan-links-btn" class="btn">Scan Links</button>
+            
+            <div id="link-result" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <!-- Footer Controls -->
+    <button id="logout-btn" class="btn btn-secondary" style="margin-top: 5px;">Logout</button>
+
+    <!-- Load utilities and then main script -->
+    <script src="scripts/utils.js"></script>
     <script src="scripts/popup.js"></script>
 </body>
 </html>

@@ -3,18 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register</title>
+    <title>Register - MailCheckr</title>
     <link rel="stylesheet" href="styles/popup.css">
 </head>
 <body>
-    <h2>Register</h2>
-    <input type="text" id="username" placeholder="Username">
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Password">
-    <input type="password" id="confirm-password" placeholder="Confirm Password">
-    <button id="register-btn">Register</button>
-    <p>Already a user? <a href="login.html">Login here</a></p>
-    <p id="error-message"></p>
+    <div class="auth-container card">
+        <h2 class="auth-title">Register Account</h2>
+        <div class="subtitle">Create a free account to get started</div>
+        
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" placeholder="Choose a username">
+        </div>
+        
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" placeholder="Enter your email">
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" placeholder="Create a password">
+        </div>
+        
+        <div class="form-group">
+            <label for="confirm-password">Confirm Password</label>
+            <input type="password" id="confirm-password" placeholder="Re-enter password">
+        </div>
+        
+        <button id="register-btn" class="btn">Register</button>
+        
+        <div class="auth-links">
+            Already a user? <a href="login.html">Login here</a>
+        </div>
+        
+        <p id="error-message" class="error-message"></p>
+    </div>
 
     <script src="scripts/auth.js"></script>
 </body>

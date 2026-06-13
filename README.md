@@ -1,1 +1,1 @@
-# Email-safety-checker
+# MailCheckr - An Email safety checker
