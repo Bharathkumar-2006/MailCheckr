@@ -6,20 +6,30 @@ MailCheckr is an advanced browser extension designed to audit email safety. It p
 
 ## Key Features
 
-### 1. Sender Reputation Checker
+### 1. Automated Email Scraping & Background Audits
+- **Gmail Integration**: Monitors Gmail thread views in the background and automatically fetches the raw email source on message opened using the user's active session.
+- **Background Pipeline**: Extracts headers, runs the link scanner, decodes Quoted-Printable sections, and connects to the database using background JWT storage to check sender reputation.
+- **Tab Auto-fill**: Opening the extension popup on an active email automatically populates and displays results for all checks (reputation card, routing hops, link threat table) without requiring manual interaction.
+
+### 2. Proactive Alert System
+- **Gmail In-page Warning Banner**: Injects a warning banner directly at the top of the email container inside Gmail if the email contains high-risk links, unverified headers (SPF/DKIM/DMARC failure), or poor sender reputation. Includes a details accordion list and link triggers.
+- **Programmatic Popup Trigger**: Automatically opens the extension popup (`chrome.action.openPopup()`) when a high-risk email is opened to notify the user of threats immediately.
+
+### 3. Sender Reputation Checker
 - Checks active sender emails against spam databases to retrieve deliverability status and fraud risk.
 - Returns a graphical report detailing deliverability, spam score (0-100), and first seen timestamps.
 
-### 2. Email Header Analyzer
-- Allows pasting of raw email headers (extracted from Gmail, Outlook, etc.).
+### 4. Email Header Analyzer
+- Automatically extracts headers from open emails or allows manual pasting.
 - Parses and displays:
   - **Metadata**: From, Return-Path, and originating Sender IP address.
   - **Email Signatures**: Extraction of **SPF**, **DKIM**, and **DMARC** results.
   - **Authentication Badging**: Color-coded badges indicating verification status (Green = Pass, Yellow = Warning/Neutral, Red = Fail).
   - **Routing Timeline Flow**: Reconstructs a chronological step-by-step received chain detailing each server hop, IP address, and transit timestamps.
 
-### 3. Malicious Link Scanner
-- Parses plain-text or HTML message bodies to extract all URLs.
+### 5. Malicious Link Scanner
+- Automatically extracts links from open emails or allows manual pasting.
+- **Paste Fallback**: Supports manually pasting raw domains or IPs (e.g. `paypal.com` or `1.1.1.1`) without the `http://` or `https://` prefix, prepending the protocol automatically.
 - Audits domains against five strict phishing heuristics:
   - **IP Hostnames**: Flagging raw IPv4/IPv6 addresses.
   - **Punycode**: Detecting Internationalized Domain Name (IDN) homograph attacks.

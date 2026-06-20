@@ -1,10 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "Email Safety Checker",
-  "version": "1.0",
-  "description": "Check if an email sender is safe or a scammer.",
-  "permissions": ["storage", "activeTab", "scripting"],
-  "host_permissions": ["http://localhost:5000/*"],
+  "name": "MailCheckr",
+  "version": "1.1",
+  "description": "Advanced email safety inspector with automated header analysis, link scanning and phishing alerts.",
+  "permissions": ["storage", "activeTab", "scripting", "tabs"],
+  "host_permissions": [
+    "http://localhost:5000/*",
+    "https://mail.google.com/*"
+  ],
   "background": {
     "service_worker": "scripts/background.js"
   },
@@ -14,7 +17,8 @@
   "content_scripts": [
     {
       "matches": ["*://mail.google.com/*"],
-      "js": ["scripts/content.js"]
+      "js": ["scripts/content.js"],
+      "run_at": "document_idle"
     }
   ]
 }

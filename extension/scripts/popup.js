@@ -1,12 +1,24 @@
 document.addEventListener("DOMContentLoaded", function () {
-    const token = localStorage.getItem("token");
+    chrome.storage.local.get("token", (storageData) => {
+        const token = storageData.token || localStorage.getItem("token");
 
-    // Redirect to login if no token
-    if (!token) {
-        window.location.href = "login.html";
-        return;
-    }
+        // Redirect to login if no token
+        if (!token) {
+            window.location.href = "login.html";
+            return;
+        }
 
+        // Sync to chrome.storage.local if missing
+        if (token && !storageData.token) {
+            chrome.storage.local.set({ token });
+        }
+
+        // Initialize the popup logic
+        initPopup(token);
+    });
+});
+
+function initPopup(token) {
     // HTML Escaping Utility
     function escapeHtml(str) {
         if (!str) return '';
@@ -48,50 +60,68 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    // --- TAB 1: SENDER EMAIL CHECKER (EXISTING FEATURE) ---
+    // --- DOM Elements ---
     const emailInput = document.getElementById("email-input");
     const fetchEmailBtn = document.getElementById("fetch-email-btn");
     const checkEmailBtn = document.getElementById("check-email-btn");
     const resultDisplay = document.getElementById("result");
 
-    // Fetch and display the latest sender email from current tab
-    function fetchLatestEmail() {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (!tabs || tabs.length === 0) {
-                emailInput.placeholder = "Enter email manually";
-                return;
-            }
-            chrome.tabs.sendMessage(tabs[0].id, { action: "getEmail" }, (response) => {
-                if (response && response.email) {
-                    chrome.storage.local.set({ email: response.email }, () => {
-                        emailInput.value = response.email;
-                    });
-                } else {
-                    emailInput.placeholder = "Enter email manually";
-                }
-            });
-        });
+    const headerInput = document.getElementById("header-input");
+    const analyzeHeaderBtn = document.getElementById("analyze-header-btn");
+    const headerResult = document.getElementById("header-result");
+
+    const contentInput = document.getElementById("content-input");
+    const scanLinksBtn = document.getElementById("scan-links-btn");
+    const linkResult = document.getElementById("link-result");
+
+    // --- SENDER EMAIL CHECKER (TAB 1) ---
+
+    // Render reputation check data inside the result container
+    function renderSenderReputation(data) {
+        if (!data) return;
+        const validBadge = data.valid 
+            ? '<span class="badge badge-success">Valid</span>' 
+            : '<span class="badge badge-danger">Invalid</span>';
+        const disposableBadge = data.disposable
+            ? '<span class="badge badge-danger">Disposable</span>'
+            : '<span class="badge badge-success">Permanent</span>';
+        
+        let spamScoreClass = 'badge-success';
+        if (data.fraud_score > 75) {
+            spamScoreClass = 'badge-danger';
+        } else if (data.fraud_score > 30) {
+            spamScoreClass = 'badge-warning';
+        }
+        
+        resultDisplay.innerHTML = `
+            <div class="result-header">
+                <strong>Check Report</strong>
+                ${validBadge}
+            </div>
+            <div class="result-row">
+                <span class="result-label">Disposable:</span>
+                <span class="result-val">${disposableBadge}</span>
+            </div>
+            <div class="result-row">
+                <span class="result-label">Deliverability:</span>
+                <span class="result-val"><strong>${escapeHtml(data.deliverability || 'N/A')}</strong></span>
+            </div>
+            <div class="result-row">
+                <span class="result-label">Fraud/Spam Score:</span>
+                <span class="result-val">
+                    <span class="badge ${spamScoreClass}">${data.fraud_score || 0} / 100</span>
+                </span>
+            </div>
+            <div class="result-row">
+                <span class="result-label">First Seen:</span>
+                <span class="result-val mono">${escapeHtml((data.first_seen && data.first_seen.human) || 'Unknown')}</span>
+            </div>
+        `;
     }
 
-    // Load stored email if available
-    chrome.storage.local.get("email", (data) => {
-        if (data.email) {
-            emailInput.value = data.email;
-        } else {
-            fetchLatestEmail();
-        }
-    });
-
-    fetchEmailBtn.addEventListener("click", fetchLatestEmail);
-
     // Call local API server to check email reputation
-    checkEmailBtn.addEventListener("click", () => {
-        const email = emailInput.value.trim();
-        if (!email) {
-            resultDisplay.innerHTML = "<p class='error-message'>Please enter an email.</p>";
-            return;
-        }
-
+    function performSenderCheck(email) {
+        if (!email) return;
         resultDisplay.innerHTML = "<p style='color:var(--text-secondary); font-size:0.85rem;'>Checking email reputation...</p>";
 
         fetch("http://localhost:5000/api/check-email", {
@@ -107,61 +137,133 @@ document.addEventListener("DOMContentLoaded", function () {
             return response.json();
         })
         .then(data => {
-            const validBadge = data.valid 
-                ? '<span class="badge badge-success">Valid</span>' 
-                : '<span class="badge badge-danger">Invalid</span>';
-            const disposableBadge = data.disposable
-                ? '<span class="badge badge-danger">Disposable</span>'
-                : '<span class="badge badge-success">Permanent</span>';
-            
-            let spamScoreClass = 'badge-success';
-            if (data.fraud_score > 75) {
-                spamScoreClass = 'badge-danger';
-            } else if (data.fraud_score > 30) {
-                spamScoreClass = 'badge-warning';
-            }
-            
-            resultDisplay.innerHTML = `
-                <div class="result-header">
-                    <strong>Check Report</strong>
-                    ${validBadge}
-                </div>
-                <div class="result-row">
-                    <span class="result-label">Disposable:</span>
-                    <span class="result-val">${disposableBadge}</span>
-                </div>
-                <div class="result-row">
-                    <span class="result-label">Deliverability:</span>
-                    <span class="result-val"><strong>${escapeHtml(data.deliverability || 'N/A')}</strong></span>
-                </div>
-                <div class="result-row">
-                    <span class="result-label">Fraud/Spam Score:</span>
-                    <span class="result-val">
-                        <span class="badge ${spamScoreClass}">${data.fraud_score || 0} / 100</span>
-                    </span>
-                </div>
-                <div class="result-row">
-                    <span class="result-label">First Seen:</span>
-                    <span class="result-val mono">${escapeHtml((data.first_seen && data.first_seen.human) || 'Unknown')}</span>
-                </div>
-            `;
+            renderSenderReputation(data);
         })
         .catch(error => {
             console.error("Error checking email reputation:", error);
             resultDisplay.innerHTML = "<p class='error-message'>Error checking email reputation. Make sure the API server is running.</p>";
         });
+    }
+
+    // Fetch and display the latest sender email from current tab
+    function fetchLatestEmail() {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (!tabs || tabs.length === 0) {
+                emailInput.placeholder = "Enter email manually";
+                return;
+            }
+
+            const tab = tabs[0];
+
+            // Only try to extract from Gmail tabs
+            if (!tab.url || !tab.url.includes("mail.google.com")) {
+                emailInput.placeholder = "Open a Gmail email first";
+                return;
+            }
+
+            // Step 1: Try message-passing to already-loaded content script
+            chrome.tabs.sendMessage(tab.id, { action: "getEmail" }, (response) => {
+                if (chrome.runtime.lastError) {
+                    // Content script not ready — fall through to direct injection
+                }
+
+                if (response && response.email) {
+                    chrome.storage.local.set({ email: response.email });
+                    emailInput.value = response.email;
+                    return;
+                }
+
+                // Step 2: Fallback — inject script directly into the tab to scrape the DOM
+                chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    func: () => {
+                        // CRITICAL: scope to the open email pane, not the whole page
+                        // Without this, querySelector grabs the FIRST email in the inbox list
+                        const root = document.querySelector('div[role="main"]') || document;
+
+                        // .yP and .zF are confirmed Gmail sender name classes (from DOM audit)
+                        for (const cls of ['.yP', '.zF', '.gD', '.go']) {
+                            const el = root.querySelector(cls + '[email]');
+                            if (el) {
+                                const v = el.getAttribute('email');
+                                if (v && v.includes('@')) return v.trim();
+                            }
+                        }
+                        // Any span[email] inside the open pane
+                        const emailEl = root.querySelector('span[email]');
+                        if (emailEl) {
+                            const v = emailEl.getAttribute('email');
+                            if (v && v.includes('@')) return v.trim();
+                        }
+                        // data-hovercard-id inside the open pane
+                        const hoverEl = root.querySelector('[data-hovercard-id]');
+                        if (hoverEl) {
+                            const v = hoverEl.getAttribute('data-hovercard-id');
+                            if (v && v.includes('@')) return v.trim();
+                        }
+                        // span[title] with @ inside open pane
+                        for (const el of root.querySelectorAll('span[title]')) {
+                            const t = el.getAttribute('title');
+                            if (t && t.includes('@') && t.includes('.')) return t.trim();
+                        }
+                        // mailto: links inside open pane
+                        for (const el of root.querySelectorAll('a[href^="mailto:"]')) {
+                            const addr = el.getAttribute('href').replace('mailto:', '').split('?')[0].trim();
+                            if (addr.includes('@')) return addr;
+                        }
+                        // Leaf node text scan inside open pane
+                        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+                        for (const el of root.querySelectorAll('span, td')) {
+                            if (el.children.length === 0) {
+                                const text = (el.textContent || '').trim();
+                                if (emailRegex.test(text)) return text;
+                            }
+                        }
+                        return null;
+                    }
+
+                }, (results) => {
+                    if (chrome.runtime.lastError) {
+                        emailInput.placeholder = "Enter email manually";
+                        return;
+                    }
+                    const email = results && results[0] && results[0].result;
+                    if (email) {
+                        chrome.storage.local.set({ email });
+                        emailInput.value = email;
+                    } else {
+                        emailInput.placeholder = "Email not found — enter manually";
+                    }
+                });
+            });
+        });
+    }
+
+
+    // Load stored email if available
+    chrome.storage.local.get("email", (data) => {
+        if (data.email) {
+            emailInput.value = data.email;
+        } else {
+            fetchLatestEmail();
+        }
     });
 
+    fetchEmailBtn.addEventListener("click", fetchLatestEmail);
+    checkEmailBtn.addEventListener("click", () => {
+        const email = emailInput.value.trim();
+        if (!email) {
+            resultDisplay.innerHTML = "<p class='error-message'>Please enter an email.</p>";
+            return;
+        }
+        performSenderCheck(email);
+    });
 
-    // --- TAB 2: EMAIL HEADER ANALYZER (FEATURE 1) ---
-    const headerInput = document.getElementById("header-input");
-    const analyzeHeaderBtn = document.getElementById("analyze-header-btn");
-    const headerResult = document.getElementById("header-result");
+    // --- EMAIL HEADER ANALYZER (TAB 2) ---
 
-    analyzeHeaderBtn.addEventListener("click", () => {
-        const rawHeaders = headerInput.value.trim();
+    function performHeaderAnalysis(rawHeaders) {
         if (!rawHeaders) {
-            headerResult.innerHTML = "<p class='error-message'>Please paste raw email headers to analyze.</p>";
+            headerResult.innerHTML = "";
             return;
         }
 
@@ -254,18 +356,22 @@ document.addEventListener("DOMContentLoaded", function () {
             console.error("Header analysis error:", err);
             headerResult.innerHTML = "<p class='error-message'>Error parsing headers. Please make sure they are correct.</p>";
         }
+    }
+
+    analyzeHeaderBtn.addEventListener("click", () => {
+        const rawHeaders = headerInput.value.trim();
+        if (!rawHeaders) {
+            headerResult.innerHTML = "<p class='error-message'>Please paste raw email headers to analyze.</p>";
+            return;
+        }
+        performHeaderAnalysis(rawHeaders);
     });
 
+    // --- LINK SCANNER (TAB 3) ---
 
-    // --- TAB 3: LINK SCANNER (FEATURE 2) ---
-    const contentInput = document.getElementById("content-input");
-    const scanLinksBtn = document.getElementById("scan-links-btn");
-    const linkResult = document.getElementById("link-result");
-
-    scanLinksBtn.addEventListener("click", () => {
-        const content = contentInput.value.trim();
+    function performLinkScan(content) {
         if (!content) {
-            linkResult.innerHTML = "<p class='error-message'>Please paste email content to scan.</p>";
+            linkResult.innerHTML = "";
             return;
         }
 
@@ -329,13 +435,64 @@ document.addEventListener("DOMContentLoaded", function () {
             console.error("Link scanning error:", err);
             linkResult.innerHTML = "<p class='error-message'>Error occurred while scanning links.</p>";
         }
+    }
+
+    scanLinksBtn.addEventListener("click", () => {
+        const content = contentInput.value.trim();
+        if (!content) {
+            linkResult.innerHTML = "<p class='error-message'>Please paste email content to scan.</p>";
+            return;
+        }
+        performLinkScan(content);
     });
 
+    // --- AUTO-POPULATE & AUTO-SCAN FROM BACKGROUND RESULT ---
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (!tabs || tabs.length === 0) return;
+        const url = tabs[0].url;
+        if (!url || !url.includes("mail.google.com")) return;
+        
+        // Extract message ID from URL hash
+        const hashIndex = url.indexOf('#');
+        if (hashIndex === -1) return;
+        const hash = url.substring(hashIndex + 1);
+        const parts = hash.split('/');
+        const activeMessageId = parts[parts.length - 1];
+        
+        // Message ID validation
+        const msgIdRegex = /^[a-zA-Z0-9-_]{16,}$/;
+        if (!msgIdRegex.test(activeMessageId)) return;
+        
+        // Load details from chrome.storage.local
+        chrome.storage.local.get("scannedEmailDetails", (storageData) => {
+            const details = storageData.scannedEmailDetails;
+            if (details && details.messageId === activeMessageId) {
+                console.log("Auto-filling results from background scan for Message ID: " + activeMessageId);
+                
+                // 1. Sender Checker Tab
+                emailInput.value = details.sender || '';
+                if (details.senderReputation) {
+                    renderSenderReputation(details.senderReputation);
+                } else if (details.sender) {
+                    performSenderCheck(details.sender);
+                }
+                
+                // 2. Header Analyzer Tab
+                headerInput.value = details.rawHeaders || '';
+                performHeaderAnalysis(details.rawHeaders);
+                
+                // 3. Link Scanner Tab
+                contentInput.value = details.emailBody || '';
+                performLinkScan(details.emailBody);
+            }
+        });
+    });
 
     // --- LOGOUT LOGIC ---
     document.getElementById("logout-btn").addEventListener("click", () => {
         localStorage.removeItem("token");
-        chrome.storage.local.remove("email");
-        window.location.href = "login.html";
+        chrome.storage.local.remove(["email", "token", "scannedEmailDetails"], () => {
+            window.location.href = "login.html";
+        });
     });
-});
+}

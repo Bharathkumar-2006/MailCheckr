@@ -381,12 +381,36 @@ function analyzeUrl(url) {
  * @param {string} emailContent 
  * @returns {Array} Scan results
  */
+/**
+ * Decodes quoted-printable string (common in raw email bodies).
+ */
+function decodeQuotedPrintable(str) {
+    if (!str) return '';
+    return str
+        .replace(/=\r?\n/g, '') // Remove soft line breaks
+        .replace(/=([0-9A-F]{2})/gi, (match, p1) => {
+            return String.fromCharCode(parseInt(p1, 16));
+        });
+}
+
 function scanUrls(emailContent) {
     if (!emailContent || typeof emailContent !== 'string') return [];
     
+    // Decode quoted-printable formats
+    const decodedContent = decodeQuotedPrintable(emailContent);
+    
     // Regex matching URLs
     const urlRegex = /https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/g;
-    const matches = emailContent.match(urlRegex) || [];
+    let matches = decodedContent.match(urlRegex) || [];
+    
+    // Fallback: If no http/https URLs are matched, but the content looks like a single raw domain or IP
+    if (matches.length === 0) {
+        const trimmed = decodedContent.trim();
+        const domainRegex = /^[a-zA-Z0-9][-a-zA-Z0-9@:%._\+~#=]{0,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/i;
+        if (domainRegex.test(trimmed)) {
+            matches = ['http://' + trimmed];
+        }
+    }
     
     // Deduplicate and clean trailing punctuation
     const cleanedUrls = matches.map(url => url.replace(/[.,;:!?)]+$/, ''));
@@ -411,6 +435,7 @@ if (typeof module !== 'undefined' && module.exports) {
         getBaseDomain,
         checkLookalike,
         analyzeUrl,
-        scanUrls
+        scanUrls,
+        decodeQuotedPrintable
     };
 }

@@ -16,7 +16,9 @@ document.addEventListener("DOMContentLoaded", () => {
             .then(data => {
                 if (data.success) {
                     localStorage.setItem("token", data.token);
-                    window.location.href = "popup.html"; 
+                    chrome.storage.local.set({ token: data.token }, () => {
+                        window.location.href = "popup.html"; 
+                    });
                 } else {
                     document.getElementById("error-message").textContent = data.message;
                 }
