@@ -459,7 +459,6 @@ tr:last-child td {
     margin-top: 10px;
 }
 
-/* Animations */
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
@@ -475,3 +474,426 @@ tr:last-child td {
         transform: translateY(0);
     }
 }
+
+/* ============================================================
+   FEATURE 2: REPLY-TO TRAP BANNER
+   ============================================================ */
+.reply-trap-banner {
+    background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05));
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-left: 4px solid #ef4444;
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    animation: slideUp var(--transition-normal);
+}
+
+.reply-trap-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.reply-trap-icon {
+    font-size: 18px;
+}
+
+.reply-trap-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #ef4444;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.reply-trap-body {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.reply-trap-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.reply-trap-row:last-child { border-bottom: none; }
+
+.reply-trap-label { color: var(--text-muted); font-size: 0.75rem; }
+
+.reply-trap-val {
+    font-family: monospace;
+    font-size: 0.78rem;
+    color: var(--text-primary);
+    word-break: break-all;
+}
+
+.reply-trap-val.danger { color: #ef4444; }
+
+/* ============================================================
+   FEATURE 1: SPY PIXEL DETECTOR UI
+   ============================================================ */
+.spy-intro, .journey-intro {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--bg-tertiary);
+}
+
+.spy-intro-icon, .journey-intro-icon {
+    font-size: 28px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.spy-intro-title, .journey-intro-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.spy-intro-desc, .journey-intro-desc {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.pixel-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: var(--radius-md);
+    margin-bottom: 14px;
+    animation: fadeIn var(--transition-normal);
+}
+
+.pixel-summary.danger {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+}
+
+.pixel-summary.warning {
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.3);
+}
+
+.pixel-summary.safe {
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.3);
+}
+
+.pixel-summary-icon { font-size: 24px; flex-shrink: 0; }
+
+.pixel-summary-text .pixel-count {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.pixel-summary-text .pixel-desc {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+.tracker-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    animation: slideUp var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+}
+
+.tracker-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--color-warning);
+}
+
+.tracker-card.high-risk::before { background: var(--color-danger); }
+.tracker-card.low-risk::before  { background: var(--color-success); }
+
+.tracker-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.tracker-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.tracker-category {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    background: var(--bg-secondary);
+    padding: 2px 7px;
+    border-radius: 99px;
+    border: 1px solid var(--bg-tertiary);
+}
+
+.tracker-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.tracker-tag {
+    font-size: 0.68rem;
+    padding: 2px 7px;
+    border-radius: 99px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.tracker-tag.spy    { background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+.tracker-tag.path   { background: rgba(245,158,11,0.2); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+.tracker-tag.known  { background: rgba(99,102,241,0.2); color: #818cf8; border: 1px solid rgba(99,102,241,0.3); }
+
+.tracker-url {
+    font-family: monospace;
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    word-break: break-all;
+    margin-top: 4px;
+    padding: 4px 6px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* Pulsing spy pixel animation */
+@keyframes spyPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.92); }
+}
+
+.spy-pulse {
+    display: inline-block;
+    animation: spyPulse 2s ease-in-out infinite;
+}
+
+.empty-state {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    padding: 24px 16px;
+    border: 1px dashed var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    line-height: 1.5;
+}
+
+/* ============================================================
+   FEATURE 3: EMAIL JOURNEY VISUALIZER
+   ============================================================ */
+.journey-stats {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.journey-stat {
+    flex: 1;
+    background: var(--bg-primary);
+    border: 1px solid var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    padding: 8px;
+    text-align: center;
+}
+
+.journey-stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent-start);
+}
+
+.journey-stat-label {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.journey-timeline {
+    position: relative;
+    padding-left: 18px;
+}
+
+.journey-timeline::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 12px;
+    bottom: 12px;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--accent-start), var(--bg-tertiary));
+}
+
+.hop-item {
+    position: relative;
+    margin-bottom: 12px;
+    animation: slideUp var(--transition-normal);
+}
+
+.hop-item:last-child { margin-bottom: 0; }
+
+.hop-dot {
+    position: absolute;
+    left: -18px;
+    top: 14px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--bg-tertiary);
+    border: 2px solid var(--bg-secondary);
+    z-index: 1;
+}
+
+.hop-dot.origin {
+    background: var(--accent-start);
+    box-shadow: 0 0 10px rgba(99,102,241,0.6);
+}
+
+.hop-dot.final {
+    background: var(--color-success);
+    box-shadow: 0 0 10px rgba(16,185,129,0.6);
+}
+
+.hop-dot.suspicious {
+    background: var(--color-danger);
+    box-shadow: 0 0 10px rgba(239,68,68,0.6);
+}
+
+.hop-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    transition: border-color var(--transition-fast);
+}
+
+.hop-card:hover { border-color: var(--accent-start); }
+.hop-card.suspicious-hop { border-color: rgba(239,68,68,0.4); }
+
+.hop-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 6px;
+}
+
+.hop-server {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    word-break: break-all;
+    flex: 1;
+    margin-right: 8px;
+}
+
+.hop-delay {
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: 99px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-weight: 600;
+}
+
+.hop-delay.origin-tag {
+    background: rgba(99,102,241,0.2);
+    color: #818cf8;
+    border: 1px solid rgba(99,102,241,0.3);
+}
+
+.hop-delay.fast {
+    background: rgba(16,185,129,0.2);
+    color: var(--color-success);
+    border: 1px solid rgba(16,185,129,0.3);
+}
+
+.hop-delay.slow {
+    background: rgba(245,158,11,0.2);
+    color: var(--color-warning);
+    border: 1px solid rgba(245,158,11,0.3);
+}
+
+.hop-delay.anomaly {
+    background: rgba(239,68,68,0.2);
+    color: var(--color-danger);
+    border: 1px solid rgba(239,68,68,0.3);
+}
+
+.hop-geo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.hop-flag { font-size: 1rem; }
+
+.hop-location {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.hop-org {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    background: var(--bg-secondary);
+    padding: 1px 6px;
+    border-radius: 99px;
+    border: 1px solid var(--bg-tertiary);
+}
+
+.hop-ip {
+    font-family: monospace;
+    font-size: 0.72rem;
+    color: var(--accent-end);
+    margin-top: 2px;
+}
+
+.hop-anomaly-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    color: var(--color-danger);
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.journey-warning {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    font-size: 0.78rem;
+    color: #fca5a5;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Country code to flag emoji helper classes handled in JS */
+

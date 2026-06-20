@@ -12,29 +12,34 @@
 
     <!-- Navigation Tabs -->
     <div class="tabs">
-        <button class="tab-btn active" data-tab="sender-checker">Sender Check</button>
-        <button class="tab-btn" data-tab="header-analyzer">Header Analyzer</button>
-        <button class="tab-btn" data-tab="link-scanner">Link Scanner</button>
+        <button class="tab-btn active" data-tab="sender-checker">Sender</button>
+        <button class="tab-btn" data-tab="header-analyzer">Headers</button>
+        <button class="tab-btn" data-tab="link-scanner">Links</button>
+        <button class="tab-btn" data-tab="spy-pixel">Spy Pixels</button>
+        <button class="tab-btn" data-tab="journey">Journey</button>
     </div>
 
-    <!-- Tab 1: Sender Checker (Existing) -->
+    <!-- Tab 1: Sender Checker -->
     <div id="sender-checker" class="tab-content active">
         <div class="card">
             <div class="form-group">
                 <label for="email-input">Sender Email Address</label>
                 <input type="text" id="email-input" placeholder="Fetching active email...">
             </div>
-            
+
+            <!-- Reply-To Trap Alert (shown when detected) -->
+            <div id="reply-to-trap-banner" class="reply-trap-banner" style="display:none;"></div>
+
             <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                 <button id="fetch-email-btn" class="btn btn-secondary" style="flex: 1; margin: 0; padding: 10px 0;">Fetch Email</button>
                 <button id="check-email-btn" class="btn" style="flex: 1; margin: 0; padding: 10px 0;">Check Email</button>
             </div>
-            
+
             <div id="result"></div>
         </div>
     </div>
 
-    <!-- Tab 2: Email Header Analyzer (Feature 1) -->
+    <!-- Tab 2: Email Header Analyzer -->
     <div id="header-analyzer" class="tab-content">
         <div class="card">
             <div class="form-group">
@@ -42,12 +47,11 @@
                 <textarea id="header-input" placeholder="Paste raw email headers here... (from Gmail, Outlook, etc.)"></textarea>
             </div>
             <button id="analyze-header-btn" class="btn">Analyze Headers</button>
-            
             <div id="header-result" style="margin-top: 15px;"></div>
         </div>
     </div>
 
-    <!-- Tab 3: Link Scanner (Feature 2) -->
+    <!-- Tab 3: Link Scanner -->
     <div id="link-scanner" class="tab-content">
         <div class="card">
             <div class="form-group">
@@ -55,8 +59,39 @@
                 <textarea id="content-input" placeholder="Paste the body of the email here to scan for suspicious links..."></textarea>
             </div>
             <button id="scan-links-btn" class="btn">Scan Links</button>
-            
             <div id="link-result" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <!-- Tab 4: Spy Pixel Detector -->
+    <div id="spy-pixel" class="tab-content">
+        <div class="card">
+            <div class="spy-intro">
+                <div class="spy-intro-icon">👁️</div>
+                <div>
+                    <div class="spy-intro-title">Tracking Pixel Scanner</div>
+                    <div class="spy-intro-desc">Detects invisible spy pixels that silently report when you open an email — revealing your IP, device, and location to the sender.</div>
+                </div>
+            </div>
+            <div id="spy-pixel-result">
+                <div class="empty-state">Open a Gmail email to auto-scan for spy pixels, or wait for the background scan to complete.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 5: Email Journey -->
+    <div id="journey" class="tab-content">
+        <div class="card">
+            <div class="journey-intro">
+                <div class="journey-intro-icon">🗺️</div>
+                <div>
+                    <div class="journey-intro-title">Email Journey Visualizer</div>
+                    <div class="journey-intro-desc">Traces every server your email passed through — showing countries, organizations, and timing anomalies.</div>
+                </div>
+            </div>
+            <div id="journey-result">
+                <div class="empty-state">Open a Gmail email to visualize its routing journey.</div>
+            </div>
         </div>
     </div>
 

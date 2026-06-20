@@ -74,6 +74,10 @@ function initPopup(token) {
     const scanLinksBtn = document.getElementById("scan-links-btn");
     const linkResult = document.getElementById("link-result");
 
+    const spyPixelResult = document.getElementById("spy-pixel-result");
+    const journeyResult  = document.getElementById("journey-result");
+    const replyTrapBanner = document.getElementById("reply-to-trap-banner");
+
     // --- SENDER EMAIL CHECKER (TAB 1) ---
 
     // Render reputation check data inside the result container
@@ -457,8 +461,11 @@ function initPopup(token) {
         if (hashIndex === -1) return;
         const hash = url.substring(hashIndex + 1);
         const parts = hash.split('/');
-        const activeMessageId = parts[parts.length - 1];
+        let activeMessageId = parts[parts.length - 1];
         
+        // Strip query parameters
+        activeMessageId = activeMessageId.split('?')[0];
+
         // Message ID validation
         const msgIdRegex = /^[a-zA-Z0-9-_]{16,}$/;
         if (!msgIdRegex.test(activeMessageId)) return;
@@ -468,7 +475,7 @@ function initPopup(token) {
             const details = storageData.scannedEmailDetails;
             if (details && details.messageId === activeMessageId) {
                 console.log("Auto-filling results from background scan for Message ID: " + activeMessageId);
-                
+
                 // 1. Sender Checker Tab
                 emailInput.value = details.sender || '';
                 if (details.senderReputation) {
@@ -476,17 +483,51 @@ function initPopup(token) {
                 } else if (details.sender) {
                     performSenderCheck(details.sender);
                 }
-                
+
                 // 2. Header Analyzer Tab
                 headerInput.value = details.rawHeaders || '';
                 performHeaderAnalysis(details.rawHeaders);
-                
+
                 // 3. Link Scanner Tab
                 contentInput.value = details.emailBody || '';
                 performLinkScan(details.emailBody);
+
+                // 4. Reply-To Trap (Sender tab banner)
+                if (details.replyToTrap) renderReplyToTrap(details.replyToTrap);
+
+                // 5. Spy Pixel Tab
+                if (details.trackingPixels !== undefined) renderSpyPixels(details.trackingPixels);
+
+                // 6. Journey Tab
+                if (details.journeyHops && details.journeyHops.length > 0) renderJourney(details.journeyHops);
+            } else {
+                // Background scan not done yet — show loading states
+                spyPixelResult.innerHTML = '<div class="empty-state">⏳ Scanning email for spy pixels...</div>';
+                journeyResult.innerHTML  = '<div class="empty-state">⏳ Tracing email journey...</div>';
             }
         });
     });
+
+    // Listen for background scan completion — re-render new tabs when data arrives
+    // This fixes the race condition where popup opens before geolocation finishes
+    chrome.storage.onChanged.addListener((changes, area) => {
+        if (area !== 'local' || !changes.scannedEmailDetails) return;
+        const details = changes.scannedEmailDetails.newValue;
+        if (!details) return;
+
+        // Re-render all dynamic panels with fresh data
+        if (details.replyToTrap)   renderReplyToTrap(details.replyToTrap);
+        if (details.trackingPixels !== undefined) renderSpyPixels(details.trackingPixels);
+        if (details.journeyHops && details.journeyHops.length > 0) renderJourney(details.journeyHops);
+
+        // Also update sender email if not yet populated
+        if (details.sender && !emailInput.value) emailInput.value = details.sender;
+
+        console.log('MailCheckr popup: re-rendered from background scan update.');
+    });
+
+
+
 
     // --- LOGOUT LOGIC ---
     document.getElementById("logout-btn").addEventListener("click", () => {
@@ -495,4 +536,187 @@ function initPopup(token) {
             window.location.href = "login.html";
         });
     });
+
+    // ============================================================
+    // FEATURE 2: REPLY-TO TRAP RENDERER
+    // ============================================================
+    function renderReplyToTrap(trap) {
+        if (!trap || !trap.replyToPresent) {
+            replyTrapBanner.style.display = 'none';
+            return;
+        }
+        if (!trap.isTrap && !trap.emailMismatch && !trap.returnPathMismatch) {
+            replyTrapBanner.style.display = 'none';
+            return;
+        }
+
+        const riskIcon = trap.isTrap ? '🚨' : '⚠️';
+        const riskTitle = trap.isTrap ? 'Reply-To Trap Detected!' : 'Reply-To Mismatch';
+
+        replyTrapBanner.style.display = 'block';
+        replyTrapBanner.innerHTML = `
+            <div class="reply-trap-header">
+                <span class="reply-trap-icon">${riskIcon}</span>
+                <span class="reply-trap-title">${riskTitle}</span>
+            </div>
+            <div class="reply-trap-body">
+                <p style="margin-bottom:8px; font-size:0.78rem;">Replying to this email will send your response to a <strong>different address</strong> than the sender — a common Business Email Compromise (BEC) attack technique.</p>
+                <div class="reply-trap-row">
+                    <span class="reply-trap-label">From:</span>
+                    <span class="reply-trap-val">${escapeHtml(trap.fromEmail)}</span>
+                </div>
+                <div class="reply-trap-row">
+                    <span class="reply-trap-label">Reply-To:</span>
+                    <span class="reply-trap-val danger">${escapeHtml(trap.replyToEmail)}</span>
+                </div>
+                ${trap.returnPathMismatch ? `<div class="reply-trap-row">
+                    <span class="reply-trap-label">Return-Path:</span>
+                    <span class="reply-trap-val danger">${escapeHtml(trap.returnPath)}</span>
+                </div>` : ''}
+            </div>
+        `;
+    }
+
+    // ============================================================
+    // FEATURE 1: SPY PIXEL RENDERER
+    // ============================================================
+    function renderSpyPixels(pixels) {
+        if (!pixels || pixels.length === 0) {
+            spyPixelResult.innerHTML = `
+                <div class="pixel-summary safe">
+                    <div class="pixel-summary-icon">✅</div>
+                    <div class="pixel-summary-text">
+                        <div class="pixel-count">No Trackers Detected</div>
+                        <div class="pixel-desc">This email does not appear to contain any known tracking pixels or spy images.</div>
+                    </div>
+                </div>`;
+            return;
+        }
+
+        const spyCount  = pixels.filter(p => p.isTinyPixel).length;
+        const knowCount = pixels.filter(p => !p.isTinyPixel).length;
+        const summaryClass = spyCount > 0 ? 'danger' : 'warning';
+        const summaryIcon  = spyCount > 0 ? '<span class="spy-pulse">🕵️</span>' : '⚠️';
+        const summaryText  = spyCount > 0
+            ? `${spyCount} invisible spy pixel${spyCount > 1 ? 's' : ''} found — you are being tracked!`
+            : `${knowCount} known marketing tracker${knowCount > 1 ? 's' : ''} detected.`;
+
+        const cards = pixels.map(p => {
+            const riskClass = p.isTinyPixel ? 'high-risk' : (p.hasTrackingPath ? '' : 'low-risk');
+            const tags = [
+                p.isTinyPixel    ? '<span class="tracker-tag spy">Spy Pixel</span>' : '',
+                p.hasTrackingPath ? '<span class="tracker-tag path">Tracking Path</span>' : '',
+                (!p.isTinyPixel && !p.hasTrackingPath) ? '<span class="tracker-tag known">Known Service</span>' : ''
+            ].filter(Boolean).join('');
+
+            return `
+                <div class="tracker-card ${riskClass}">
+                    <div class="tracker-card-header">
+                        <span class="tracker-name">${escapeHtml(p.name)}</span>
+                        <span class="tracker-category">${escapeHtml(p.category)}</span>
+                    </div>
+                    <div class="tracker-tags">${tags}</div>
+                    <div class="tracker-url" title="${escapeHtml(p.url)}">${escapeHtml(p.url)}</div>
+                </div>`;
+        }).join('');
+
+        spyPixelResult.innerHTML = `
+            <div class="pixel-summary ${summaryClass}">
+                <div class="pixel-summary-icon">${summaryIcon}</div>
+                <div class="pixel-summary-text">
+                    <div class="pixel-count">${pixels.length} Tracker${pixels.length > 1 ? 's' : ''} Found</div>
+                    <div class="pixel-desc">${summaryText}</div>
+                </div>
+            </div>
+            ${cards}`;
+    }
+
+    // ============================================================
+    // FEATURE 3: EMAIL JOURNEY RENDERER
+    // ============================================================
+    function countryCodeToFlag(cc) {
+        if (!cc || cc.length !== 2) return '🌐';
+        return cc.toUpperCase().replace(/./g, ch =>
+            String.fromCodePoint(ch.charCodeAt(0) + 127397)
+        );
+    }
+
+    function renderJourney(hops) {
+        if (!hops || hops.length === 0) {
+            journeyResult.innerHTML = '<div class="empty-state">No routing information found in this email\'s headers.</div>';
+            return;
+        }
+
+        // Calculate summary stats
+        const countries   = [...new Set(hops.filter(h => h.geo && h.geo.country).map(h => h.geo.country))];
+        const anomalies   = hops.filter(h => h.isSuspicious).length;
+        const totalMs     = hops[hops.length-1]?.timestampMs && hops[0]?.timestampMs
+                            ? hops[hops.length-1].timestampMs - hops[0].timestampMs
+                            : null;
+        const totalTime   = totalMs !== null ? formatHopDelay(totalMs) : 'Unknown';
+
+        const anomalyWarning = anomalies > 0
+            ? `<div class="journey-warning">⚠️ ${anomalies} timestamp anomaly detected — possible forged email header.</div>`
+            : '';
+
+        const statsHtml = `
+            <div class="journey-stats">
+                <div class="journey-stat">
+                    <div class="journey-stat-value">${hops.length}</div>
+                    <div class="journey-stat-label">Total Hops</div>
+                </div>
+                <div class="journey-stat">
+                    <div class="journey-stat-value">${countries.length}</div>
+                    <div class="journey-stat-label">Countries</div>
+                </div>
+                <div class="journey-stat">
+                    <div class="journey-stat-value">${totalTime}</div>
+                    <div class="journey-stat-label">Total Transit</div>
+                </div>
+                <div class="journey-stat">
+                    <div class="journey-stat-value" style="color:${anomalies > 0 ? 'var(--color-danger)' : 'var(--color-success)'}">${anomalies > 0 ? anomalies + ' ⚠' : '✓'}</div>
+                    <div class="journey-stat-label">Anomalies</div>
+                </div>
+            </div>`;
+
+        const hopsHtml = hops.map((hop, idx) => {
+            const isOrigin = idx === 0;
+            const isFinal  = idx === hops.length - 1;
+            const dotClass = hop.isSuspicious ? 'suspicious' : (isOrigin ? 'origin' : (isFinal ? 'final' : ''));
+
+            const delayClass = hop.delayFormatted === 'Origin' ? 'origin-tag'
+                             : hop.isSuspicious ? 'anomaly'
+                             : (hop.delayMs > 60000 ? 'slow' : 'fast');
+
+            const geoHtml = hop.geo ? `
+                <div class="hop-geo">
+                    <span class="hop-flag">${countryCodeToFlag(hop.geo.countryCode)}</span>
+                    <span class="hop-location">${escapeHtml(hop.geo.city ? hop.geo.city + ', ' + hop.geo.country : hop.geo.country)}</span>
+                    ${hop.geo.org ? `<span class="hop-org">${escapeHtml(hop.geo.org.substring(0, 30))}</span>` : ''}
+                </div>` : '';
+
+            const anomalyLabel = hop.isSuspicious
+                ? `<div class="hop-anomaly-label">⚠️ Negative delay — timestamp may be forged</div>` : '';
+
+            const serverLabel = hop.from && hop.from !== 'unknown'
+                ? escapeHtml(hop.from)
+                : (hop.by && hop.by !== 'unknown' ? escapeHtml(hop.by) : 'Unknown Server');
+
+            return `
+                <div class="hop-item">
+                    <div class="hop-dot ${dotClass}"></div>
+                    <div class="hop-card ${hop.isSuspicious ? 'suspicious-hop' : ''}">
+                        <div class="hop-card-header">
+                            <div class="hop-server">${isOrigin ? '🚀 ' : (isFinal ? '📬 ' : '🔀 ')}${serverLabel}</div>
+                            <div class="hop-delay ${delayClass}">${hop.delayFormatted}</div>
+                        </div>
+                        ${hop.ip ? `<div class="hop-ip">${escapeHtml(hop.ip)}</div>` : ''}
+                        ${geoHtml}
+                        ${anomalyLabel}
+                    </div>
+                </div>`;
+        }).join('');
+
+        journeyResult.innerHTML = anomalyWarning + statsHtml + `<div class="journey-timeline">${hopsHtml}</div>`;
+    }
 }

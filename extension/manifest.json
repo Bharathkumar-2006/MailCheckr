@@ -6,8 +6,10 @@
   "permissions": ["storage", "activeTab", "scripting", "tabs"],
   "host_permissions": [
     "http://localhost:5000/*",
-    "https://mail.google.com/*"
+    "https://mail.google.com/*",
+    "http://ip-api.com/*"
   ],
+
   "background": {
     "service_worker": "scripts/background.js"
   },

@@ -419,6 +419,246 @@ function scanUrls(emailContent) {
     return uniqueUrls.map(url => analyzeUrl(url));
 }
 
+// ============================================================
+// FEATURE 1: SPY PIXEL / TRACKING PIXEL DETECTOR
+// ============================================================
+
+const TRACKING_SERVICES = [
+    { pattern: /mailchimp\.com/i, name: 'Mailchimp', category: 'Marketing' },
+    { pattern: /sendgrid\.(net|com)/i, name: 'SendGrid', category: 'Email Delivery' },
+    { pattern: /constantcontact\.com/i, name: 'Constant Contact', category: 'Marketing' },
+    { pattern: /hubspot\.com/i, name: 'HubSpot', category: 'CRM' },
+    { pattern: /marketo\.(com|net)/i, name: 'Marketo', category: 'Marketing' },
+    { pattern: /mktoresp\.com/i, name: 'Marketo', category: 'Marketing' },
+    { pattern: /salesforce\.com/i, name: 'Salesforce', category: 'CRM' },
+    { pattern: /convertkit\.com/i, name: 'ConvertKit', category: 'Marketing' },
+    { pattern: /mailgun\.(org|com)/i, name: 'Mailgun', category: 'Email Delivery' },
+    { pattern: /postmarkapp\.com/i, name: 'Postmark', category: 'Email Delivery' },
+    { pattern: /mandrillapp\.com/i, name: 'Mandrill', category: 'Email Delivery' },
+    { pattern: /cmail\d+\.com/i, name: 'Campaign Monitor', category: 'Marketing' },
+    { pattern: /campaignmonitor\.com/i, name: 'Campaign Monitor', category: 'Marketing' },
+    { pattern: /getresponse\.com/i, name: 'GetResponse', category: 'Marketing' },
+    { pattern: /aweber\.com/i, name: 'AWeber', category: 'Marketing' },
+    { pattern: /infusionsoft\.com/i, name: 'Infusionsoft', category: 'CRM' },
+    { pattern: /emarsys\.com/i, name: 'Emarsys', category: 'Marketing' },
+    { pattern: /listrak\.com/i, name: 'Listrak', category: 'Marketing' },
+    { pattern: /klaviyo\.com/i, name: 'Klaviyo', category: 'Marketing' },
+    { pattern: /drip\.com/i, name: 'Drip', category: 'Marketing' },
+    { pattern: /activecampaign\.com/i, name: 'ActiveCampaign', category: 'Marketing' },
+    { pattern: /mailjet\.com/i, name: 'Mailjet', category: 'Email Delivery' },
+    { pattern: /sendinblue\.com/i, name: 'Sendinblue', category: 'Marketing' },
+    { pattern: /brevo\.com/i, name: 'Brevo', category: 'Marketing' },
+    { pattern: /pardot\.com/i, name: 'Pardot', category: 'CRM' },
+    { pattern: /exacttarget\.com/i, name: 'ExactTarget', category: 'CRM' },
+    { pattern: /eloqua\.com/i, name: 'Oracle Eloqua', category: 'Marketing' },
+    { pattern: /responsys\.com/i, name: 'Oracle Responsys', category: 'Marketing' },
+    { pattern: /icontact\.com/i, name: 'iContact', category: 'Marketing' },
+    { pattern: /verticalresponse\.com/i, name: 'VerticalResponse', category: 'Marketing' },
+    { pattern: /dotdigital\.com/i, name: 'Dotdigital', category: 'Marketing' },
+    { pattern: /selligent\.com/i, name: 'Selligent', category: 'Marketing' },
+    { pattern: /returnoath\.com/i, name: 'Oath Ads', category: 'Advertising' },
+    { pattern: /doubleclick\.net/i, name: 'Google DoubleClick', category: 'Advertising' },
+    { pattern: /google-analytics\.com/i, name: 'Google Analytics', category: 'Analytics' },
+    { pattern: /analytics\.google\.com/i, name: 'Google Analytics', category: 'Analytics' },
+    { pattern: /mixpanel\.com/i, name: 'Mixpanel', category: 'Analytics' },
+    { pattern: /segment\.com/i, name: 'Segment', category: 'Analytics' },
+    { pattern: /amplitude\.com/i, name: 'Amplitude', category: 'Analytics' },
+];
+
+/**
+ * Detects spy/tracking pixels embedded in email HTML.
+ * Identifies known tracker services and suspicious 1x1 invisible images.
+ * @param {string} rawBody - Raw email body (HTML)
+ * @returns {Array<{name, category, url, isTinyPixel, risk}>}
+ */
+function detectTrackingPixels(rawBody) {
+    if (!rawBody || typeof rawBody !== 'string') return [];
+
+    const trackers = [];
+    const seen = new Set();
+
+    // Match all <img> tags
+    const imgRegex = /<img([^>]*)>/gi;
+    let match;
+    while ((match = imgRegex.exec(rawBody)) !== null) {
+        const attrs = match[1];
+
+        // Extract src
+        const srcMatch = attrs.match(/src=["']([^"']+)["']/i);
+        if (!srcMatch) continue;
+        const src = srcMatch[1];
+
+        // Detect 1x1 pixel dimensions in attributes
+        const wMatch = attrs.match(/width=["']?(\d+)["']?/i);
+        const hMatch = attrs.match(/height=["']?(\d+)["']?/i);
+        const w = wMatch ? parseInt(wMatch[1]) : null;
+        const h = hMatch ? parseInt(hMatch[1]) : null;
+        const isTinyPixel = (w !== null && w <= 1) || (h !== null && h <= 1);
+
+        // Check URL path for tracking signals
+        const hasTrackingPath = /\/(track|pixel|open|beacon|read-receipt|spy|email-open|wf\/)|(\ ?.*track)/i.test(src);
+
+        // Check against known tracker list
+        let matchedService = null;
+        for (const svc of TRACKING_SERVICES) {
+            if (svc.pattern.test(src)) { matchedService = svc; break; }
+        }
+
+        if (isTinyPixel || matchedService || hasTrackingPath) {
+            const key = matchedService ? matchedService.name : src.substring(0, 60);
+            if (!seen.has(key)) {
+                seen.add(key);
+                const risk = isTinyPixel ? 'high' : (matchedService ? 'medium' : 'low');
+                trackers.push({
+                    name: matchedService ? matchedService.name : 'Unknown Tracker',
+                    category: matchedService ? matchedService.category : 'Surveillance',
+                    url: src,
+                    isTinyPixel,
+                    hasTrackingPath,
+                    risk
+                });
+            }
+        }
+    }
+
+    return trackers;
+}
+
+// ============================================================
+// FEATURE 2: REPLY-TO TRAP DETECTOR
+// ============================================================
+
+/**
+ * Detects Reply-To trap attacks — where Reply-To differs from From.
+ * This is the #1 Business Email Compromise (BEC) technique.
+ * @param {Object} parsedHeaders
+ * @returns {Object} Detection result
+ */
+function detectReplyToTrap(parsedHeaders) {
+    const fromField   = getFirstHeaderValue(parsedHeaders, 'from')     || '';
+    const replyToField = getFirstHeaderValue(parsedHeaders, 'reply-to') || '';
+    const returnPathField = getFirstHeaderValue(parsedHeaders, 'return-path') || '';
+
+    const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/;
+
+    const fromEmail    = (fromField.match(emailRegex)       || [''])[0].toLowerCase();
+    const replyToEmail = (replyToField.match(emailRegex)    || [''])[0].toLowerCase();
+    const returnPath   = (returnPathField.match(emailRegex) || [''])[0].toLowerCase();
+
+    const fromDomain    = fromEmail    ? fromEmail.split('@')[1]    : '';
+    const replyToDomain = replyToEmail ? replyToEmail.split('@')[1] : '';
+    const returnDomain  = returnPath   ? returnPath.split('@')[1]   : '';
+
+    const replyToPresent = !!replyToEmail;
+    const domainMismatch = replyToPresent && fromDomain && replyToDomain && fromDomain !== replyToDomain;
+    const emailMismatch  = replyToPresent && fromEmail  && replyToEmail  && fromEmail  !== replyToEmail;
+    const returnPathMismatch = returnPath && fromDomain && returnDomain && fromDomain !== returnDomain;
+
+    let riskLevel = 'safe';
+    let reasons = [];
+
+    if (domainMismatch) {
+        riskLevel = 'high';
+        reasons.push(`Reply-To domain (${replyToDomain}) differs from sender domain (${fromDomain})`);
+    } else if (emailMismatch) {
+        riskLevel = 'medium';
+        reasons.push(`Reply-To address (${replyToEmail}) differs from sender (${fromEmail})`);
+    }
+
+    if (returnPathMismatch) {
+        if (riskLevel === 'safe') riskLevel = 'medium';
+        reasons.push(`Return-Path domain (${returnDomain}) differs from sender domain (${fromDomain})`);
+    }
+
+    return {
+        isTrap: domainMismatch,
+        replyToPresent,
+        fromEmail,
+        replyToEmail,
+        returnPath,
+        fromDomain,
+        replyToDomain,
+        domainMismatch,
+        emailMismatch,
+        returnPathMismatch,
+        riskLevel,
+        reasons
+    };
+}
+
+// ============================================================
+// FEATURE 3: EMAIL JOURNEY HOP EXTRACTOR
+// ============================================================
+
+/**
+ * Formats a millisecond delay into a human-readable string.
+ */
+function formatHopDelay(ms) {
+    if (ms < 0)       return '⚠ time anomaly';
+    if (ms < 1000)    return `${ms}ms`;
+    if (ms < 60000)   return `${Math.round(ms / 1000)}s`;
+    if (ms < 3600000) return `${Math.round(ms / 60000)}m`;
+    return `${Math.round(ms / 3600000)}h`;
+}
+
+/**
+ * Parses all Received headers into structured routing hops.
+ * Orders them chronologically (oldest first = origin first).
+ * @param {Object} parsedHeaders
+ * @returns {Array<{from, by, ip, timestamp, delayFormatted, isSuspicious}>}
+ */
+function extractEmailJourney(parsedHeaders) {
+    const receivedHeaders = getHeaderValues(parsedHeaders, 'received');
+    if (!receivedHeaders || receivedHeaders.length === 0) return [];
+
+    const hops = receivedHeaders.map(header => {
+        const hop = { raw: header, from: '', by: '', ip: '', timestamp: '', timestampMs: null };
+
+        // Extract 'from' hostname
+        const fromMatch = header.match(/from\s+([^\s(]+)/i);
+        if (fromMatch) hop.from = fromMatch[1].replace(/;$/, '').trim();
+
+        // Extract 'by' hostname
+        const byMatch = header.match(/by\s+([^\s(;]+)/i);
+        if (byMatch) hop.by = byMatch[1].replace(/;$/, '').trim();
+
+        // Extract IP address from brackets
+        const ipMatch = header.match(/\[([\d.]+)\]/);
+        if (ipMatch) hop.ip = ipMatch[1];
+
+        // Extract timestamp from the part after the final ;
+        const dateMatch = header.match(/;\s*(.+)$/);
+        if (dateMatch) {
+            const parsed = new Date(dateMatch[1].trim());
+            if (!isNaN(parsed.getTime())) {
+                hop.timestampMs = parsed.getTime();
+                hop.timestamp = parsed.toUTCString();
+            }
+        }
+
+        return hop;
+    });
+
+    // Received headers are newest-first — reverse to get origin-first
+    hops.reverse();
+
+    // Calculate delays and flag suspicious hops
+    for (let i = 0; i < hops.length; i++) {
+        if (i === 0) { hops[i].delayFormatted = 'Origin'; continue; }
+        const prev = hops[i - 1];
+        if (hops[i].timestampMs && prev.timestampMs) {
+            const diff = hops[i].timestampMs - prev.timestampMs;
+            hops[i].delayMs = diff;
+            hops[i].delayFormatted = formatHopDelay(diff);
+            hops[i].isSuspicious = diff < 0; // Negative delay = forged timestamp
+        } else {
+            hops[i].delayFormatted = 'unknown';
+        }
+    }
+
+    return hops;
+}
+
 // Dual-environment export block for node testing environment compatibility
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -436,6 +676,9 @@ if (typeof module !== 'undefined' && module.exports) {
         checkLookalike,
         analyzeUrl,
         scanUrls,
-        decodeQuotedPrintable
+        decodeQuotedPrintable,
+        detectTrackingPixels,
+        detectReplyToTrap,
+        extractEmailJourney
     };
 }
