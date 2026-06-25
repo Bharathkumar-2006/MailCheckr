@@ -128,7 +128,7 @@ function initPopup(token) {
         if (!email) return;
         resultDisplay.innerHTML = "<p style='color:var(--text-secondary); font-size:0.85rem;'>Checking email reputation...</p>";
 
-        fetch("http://localhost:5000/api/check-email", {
+        fetch("https://mailcheckr.onrender.com/api/check-email", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

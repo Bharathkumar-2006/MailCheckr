@@ -239,7 +239,7 @@ function analyzeScrapedEmail(tabId, messageId, headersText, bodyText) {
             chrome.storage.local.get('token', (storageData) => {
                 const token = storageData.token;
                 if (token && senderEmail) {
-                    fetch('http://localhost:5000/api/check-email', {
+                    fetch('https://mailcheckr.onrender.com/api/check-email', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
